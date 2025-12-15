@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Olyph AI Employee</title>
+
+  <!-- Report styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style_report.css') }}" />
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-window">
+      <div class="chat-header">
+        <div>Olyph AI Employee</div>
+      </div>
+
+      <div id="chat-body" class="chat-body" aria-live="polite">
+        <!-- Bot prompts and messages will appear here -->
+      </div>
+
+      <div class="chat-input">
+        <input id="userInput" placeholder="Type here" />
+        <button id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report JS -->
+  <script src="{{ url_for('static', filename='script_report.js') }}"></script>
+</body>
+</html>

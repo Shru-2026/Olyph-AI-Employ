@@ -1,0 +1,184 @@
+/* ===== REPORT-ONLY STYLES ===== */
+:root{
+  --bg: #f4f7fb;
+  --panel: #0b2545;
+  --accent: #1e90ff;
+  --muted: #e6eefc;
+  --card-bg: #ffffff;
+  --text-dark: #0b2545;
+}
+
+/* ===== GLOBAL ===== */
+html,body{
+  height:100%;
+  margin:0;
+  padding:0;
+  background: linear-gradient(180deg, #eef4ff 0%, #f7fbff 100%);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* container */
+.chat-container{
+  width:100%;
+  max-width:420px;
+  padding:22px;
+  box-sizing:border-box;
+}
+
+.chat-window{
+  width:100%;
+  height:520px;
+  background: var(--panel);
+  border-radius:14px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 8px 30px rgba(10,30,60,0.12);
+}
+
+/* header */
+.chat-header{
+  background: linear-gradient(90deg, #14325a, var(--panel));
+  color:#fff;
+  font-weight:700;
+  font-size:18px;
+  padding:12px 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+/* body - simplified and focused for report messages */
+.chat-body{
+  flex:1;
+  padding:16px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  background: linear-gradient(180deg,#f5f9ff, #eef4ff);
+}
+
+/* messages */
+.bot-message, .user-message{
+  padding:12px 14px;
+  border-radius:10px;
+  max-width:90%;
+  word-break:break-word;
+}
+
+.bot-message{
+  background: #e8f2ff;
+  color: var(--text-dark);
+  align-self:flex-start;
+}
+
+.user-message{
+  background: #fff;
+  color: var(--text-dark);
+  align-self:flex-end;
+  border:1px solid #e9f1ff;
+}
+
+/* input area - simplified */
+.chat-input{
+  display:flex;
+  gap:8px;
+  padding:12px;
+  background:transparent;
+  align-items:center;
+  border-top:1px solid rgba(255,255,255,0.02);
+}
+
+.chat-input input{
+  flex:1;
+  border:1px solid #e6eefc;
+  background:#fff;
+  padding:10px 12px;
+  border-radius:8px;
+  outline:none;
+}
+
+.chat-input button{
+  background: var(--accent);
+  color:#fff;
+  padding:8px 12px;
+  border-radius:8px;
+  border:none;
+  cursor:pointer;
+}
+
+/* credential modal used by report JS */
+.cred-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(5,10,20,0.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+.cred-box{
+  width:340px;
+  background: #fff;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 12px 36px rgba(10,30,60,0.24);
+  font-family:inherit;
+}
+
+.cred-box h3{
+  margin:0 0 10px 0;
+  color:var(--text-dark);
+  font-size:18px;
+}
+
+.cred-box input[type="text"],
+.cred-box input[type="password"]{
+  width:100%;
+  padding:10px 12px;
+  margin:8px 0;
+  border-radius:8px;
+  border:1px solid #e6eefc;
+  box-sizing:border-box;
+}
+
+.cred-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top:10px;
+}
+
+.cred-actions button{
+  padding:8px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  border:none;
+}
+
+.cred-actions #cred-cancel{
+  background:#f0f4ff;
+  color:var(--text-dark);
+}
+
+.cred-actions #cred-submit{
+  background:var(--accent);
+  color:#fff;
+}
+
+#cred-error{
+  color:#b00020;
+  margin-top:8px;
+  font-size:13px;
+}
+
+/* responsive */
+@media (max-width:480px){
+  .chat-window{ height:76vh; border-radius:10px; }
+  .cred-box{ width:92%; padding:14px; }
+}
