@@ -18,23 +18,36 @@ from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from google.auth.transport.requests import AuthorizedSession
 
-load_dotenv(dotenv_path="./.env")
+# -------------------------------------------------
+# Explicit .env loading (Render Secret Files support)
+# -------------------------------------------------
+ENV_PATH = "/etc/secrets/.env"
 
-# Scopes required
+if os.path.exists(ENV_PATH):
+    load_dotenv(ENV_PATH)
+else:
+    load_dotenv()  # local development fallback
+
+# -------------------------------------------------
+# Google API Scopes
+# -------------------------------------------------
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets.readonly",
     "https://www.googleapis.com/auth/drive.readonly",
 ]
 
+# -------------------------------------------------
+# Google Service Account Credentials
+# -------------------------------------------------
 def _get_service_account_credentials():
     """
-    Returns google.oauth2.service_account.Credentials by checking:
-      1) GOOGLE_SERVICE_ACCOUNT_JSON_CONTENT (raw JSON string)
-      2) GOOGLE_SERVICE_ACCOUNT_JSON (a file path)
-      3) /etc/secrets/service_account.json (Render Secret File)
-      4) ./creds/service_account.json (local fallback)
+    Priority:
+    1) GOOGLE_SERVICE_ACCOUNT_JSON_CONTENT (optional, raw JSON)
+    2) Render Secret File: /etc/secrets/service_account.json
+    3) Local fallback: ./creds/service_account.json
     """
-    # 1) Raw JSON content
+
+    # 1️⃣ Raw JSON from env (optional)
     content = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON_CONTENT", "").strip()
     if content:
         try:
@@ -44,62 +57,61 @@ def _get_service_account_credentials():
         except Exception as e:
             raise RuntimeError(f"Invalid GOOGLE_SERVICE_ACCOUNT_JSON_CONTENT: {e}")
 
-    # 2) Explicit path from env var
-    path = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
-    if path:
-        if os.path.exists(path):
-            print(f"🔐 Using GOOGLE_SERVICE_ACCOUNT_JSON at: {path}")
-            return Credentials.from_service_account_file(path, scopes=SCOPES)
-        else:
-            print(f"⚠️ GOOGLE_SERVICE_ACCOUNT_JSON set but file not found: {path}")
+    # 2️⃣ Render Secret File (PRIMARY)
+    render_path = "/etc/secrets/service_account.json"
+    if os.path.exists(render_path):
+        print(f"🔐 Using Render Secret File: {render_path}")
+        return Credentials.from_service_account_file(render_path, scopes=SCOPES)
 
-    # 3) Render secret default location
-    render_default = "/etc/secrets/service_account.json"
-    if os.path.exists(render_default):
-        print(f"🔐 Using Render Secret File: {render_default}")
-        return Credentials.from_service_account_file(render_default, scopes=SCOPES)
-
-    # 4) Local fallback (development)
+    # 3️⃣ Local development fallback
     local_path = os.path.join(os.getcwd(), "creds", "service_account.json")
     if os.path.exists(local_path):
-        print(f"🔐 Using local creds: {local_path}")
+        print(f"🔐 Using local service account file: {local_path}")
         return Credentials.from_service_account_file(local_path, scopes=SCOPES)
 
-    # Nothing found
     raise FileNotFoundError(
-        "Service account JSON not found. Ensure GOOGLE_SERVICE_ACCOUNT_JSON or "
-        "GOOGLE_SERVICE_ACCOUNT_JSON_CONTENT is set, or upload a Render Secret "
-        "File named 'service_account.json', or place creds/service_account.json locally."
+        "Service account credentials not found. "
+        "Upload service_account.json to Render Secret Files "
+        "or set GOOGLE_SERVICE_ACCOUNT_JSON_CONTENT."
     )
 
+# -------------------------------------------------
+# GSpread Client Helper
+# -------------------------------------------------
 def get_gspread_client():
     """
-    Create a gspread client authenticated with the service account.
-    Attach an AuthorizedSession so HTTP calls include OAuth2 tokens.
+    Create an authenticated gspread client using service account credentials.
     """
     creds = _get_service_account_credentials()
     client = gspread.Client(auth=creds)
     client.session = AuthorizedSession(creds)
     return client
 
+# -------------------------------------------------
+# Fetch Google Sheet → DataFrame
+# -------------------------------------------------
 def fetch_sheet_as_dataframe(
     sheet_id=None,
     sheet_name_or_index=None,
     value_render_option="FORMATTED_VALUE",
 ) -> pd.DataFrame:
     """
-    Fetch a sheet and return a pandas DataFrame.
-    Falls back to REPORT_SHEET_ID and REPORT_SHEET_NAME_OR_INDEX env vars.
+    Fetch a Google Sheet and return it as a pandas DataFrame.
+
+    Fallbacks:
+    - REPORT_SHEET_ID
+    - REPORT_SHEET_NAME_OR_INDEX
     """
+
     if not sheet_id:
         sheet_id = os.getenv("REPORT_SHEET_ID", "").strip()
         if not sheet_id:
-            raise ValueError("No sheet_id provided and REPORT_SHEET_ID is not set in environment.")
+            raise ValueError("No sheet_id provided and REPORT_SHEET_ID not set.")
 
-    # determine sheet index/name
+    # Resolve worksheet name/index
     if sheet_name_or_index is None:
         env_sheet = os.getenv("REPORT_SHEET_NAME_OR_INDEX", "").strip()
-        if env_sheet != "":
+        if env_sheet:
             try:
                 sheet_name_or_index = int(env_sheet)
             except ValueError:
@@ -121,10 +133,11 @@ def fetch_sheet_as_dataframe(
 
     header = values[0]
     rows = values[1:]
-    df = pd.DataFrame(rows, columns=header)
-    return df
+    return pd.DataFrame(rows, columns=header)
 
-
+# -------------------------------------------------
+# DataFrame → Bytes Helpers
+# -------------------------------------------------
 def dataframe_to_csv_bytes(df: pd.DataFrame):
     buf = io.BytesIO()
     df.to_csv(buf, index=False)
@@ -138,11 +151,15 @@ def dataframe_to_excel_bytes(df: pd.DataFrame):
     buf.seek(0)
     return buf
 
+# -------------------------------------------------
+# Main Report Generator
+# -------------------------------------------------
 def generate_report_bytes(sheet_id=None, sheet=None, fmt="csv"):
     """
-    Main helper to produce BytesIO, filename, mimetype.
-    Can be used by Flask routes to send downloadable CSV/XLSX.
+    Returns:
+        (BytesIO, filename, mimetype)
     """
+
     df = fetch_sheet_as_dataframe(sheet_id=sheet_id, sheet_name_or_index=sheet)
     timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
     chosen_id = sheet_id or os.getenv("REPORT_SHEET_ID", "unknown")
@@ -152,10 +169,14 @@ def generate_report_bytes(sheet_id=None, sheet=None, fmt="csv"):
         bio = dataframe_to_csv_bytes(df)
         filename = f"sheet_{chosen_id}_{timestamp}.csv"
         mimetype = "text/csv"
+
     elif fmt_lower in ("xlsx", "excel"):
         bio = dataframe_to_excel_bytes(df)
         filename = f"sheet_{chosen_id}_{timestamp}.xlsx"
-        mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mimetype = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
     else:
         raise ValueError("Unsupported format. Use 'csv' or 'xlsx'.")
 
