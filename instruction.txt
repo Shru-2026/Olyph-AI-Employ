@@ -11,5 +11,5 @@ Step by step instructions to run this locally on your device.
 7. Install all the dependencies: cmd - "pip install -r requirements.txt"
 8. Run the application: cmd - "run app_report.py"
 9. Click the link (ctrl+link) on the terminal, it will open in the browser
-10. To stop the application from running: press ctrl+cd
+10. To stop the application from running: press ctrl+c
 11. If you want to deactivate the enbironemnet: cmd - "conda deactivate my_env"
